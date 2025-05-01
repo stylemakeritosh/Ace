@@ -1,0 +1,143 @@
+local plr = game.Players.LocalPlayer
+
+print("Loading Variables")
+local char = plr.Character or plr.CharacterAdded:Wait()
+local hum = char.Humanoid
+local humr = char.HumanoidRootPart
+local bp = plr.Backpack
+
+local fpart:Part = workspace:FindFirstChild("QwenzyPart") or Instance.new("Part", workspace)
+fpart.CFrame = CFrame.new(13000+math.random(-250,500), 130000, 13000+math.random(-250,500))
+fpart.Anchored = true
+fpart.Color = Color3.new(0.0156863, 1, 0)
+fpart.Size = Vector3.new(50, 1, 50)
+fpart.Name = "QwenzyPart"
+
+local function updVariables()
+    char = plr.Character or plr.CharacterAdded:Wait()
+    hum = char.Humanoid
+    humr = char.HumanoidRootPart
+    bp = plr.Backpack
+end
+
+print("Loading Gui")
+local DrRayLibrary = loadstring(game:HttpGet("https://raw.githubusercontent.com/AZYsGithub/DrRay-UI-Library/main/DrRay.lua"))()
+
+print("Loading Window")
+local window = DrRayLibrary:Load("Itoshi Hub", "Default")
+
+print("Loading Connections")
+plr.CharacterAdded:Connect(function()
+    updVariables()
+end)
+plr.Idled:Connect(function()
+    updVariables()
+    game:GetService("VirtualUser"):Button2Down(Vector2.new(), workspace.CurrentCamera.CFrame)
+end)
+
+print("Loading Functions")
+
+local Main = DrRayLibrary.newTab("Main", "4483362458")
+local Other = DrRayLibrary.newTab("Other", "rewind")
+
+local LevelFarm = false
+local SafeZone = false
+local NoEffects = false
+local speed = nil
+local jump = nil
+local status = "Getting"
+
+local function getPing()
+    local stats = plr:FindFirstChild("NetworkClient"):FindFirstChild("Ping")
+    if stats then
+        return stats.Value / 1000
+    end
+    local pingStat = plr:FindFirstChild("PerformanceStats") and plr.PerformanceStats:FindFirstChild("Ping")
+    if pingStat then
+        local pingStr = pingStat.Text:match("%d+")
+        return tonumber(pingStr or "100") / 1000
+    end
+    return 0.1
+end
+
+local function teleportToPredictedBall(ball)
+    local ping = 1.5
+    local velocity = ball.Velocity
+    local predictedPosition = ball.Position + (velocity * ping)
+    humr.CFrame = CFrame.new(predictedPosition + Vector3.new(0, 3, 0))
+end
+
+workspace.Barrier1.CanCollide = false
+workspace.Barrier2.CanCollide = false
+
+Main.newToggle("Auto Farm Goals", "Toggles auto farming", false, function(toggleState)
+    updVariables()
+    LevelFarm = toggleState
+    if toggleState then
+        while wait() do
+            updVariables()
+            if LevelFarm and plr.TeamColor ~= BrickColor.new("White") then
+                print(status)
+                if status == "Getting" then
+                    local ball = workspace.World.Balls:FindFirstChild("Default")
+                    if ball then
+                        local BallPart = ball:FindFirstChild("BallPart")
+                        if BallPart then
+                            teleportToPredictedBall(ball.BallPart)
+                        end
+                    end
+                    if char.Ball:FindFirstChild("Holding") then
+                        warn("Ball catched")
+                        status = "Holding"
+                    end
+                elseif status == "Holding" then
+                    if char.Ball:FindFirstChild("Holding") then
+                        status = "Shooting"
+                        local cf
+                        local shoot = false
+                        if plr.TeamColor == BrickColor.new("Persimmon") then
+                            print("u20")
+                            cf = CFrame.new(-343.781799, 92.3485107, -385.377777, -0.613885641, 5.36675877e-08, -0.789394975, 1.84116757e-08, 1, 5.36675877e-08, 0.789394975, 1.84116757e-08, -0.613885641)
+                            shoot = true
+                        elseif plr.TeamColor == BrickColor.new("Cyan") then
+                            print("Bluelock")
+                            cf = CFrame.new(-339.348999, 92.3471527, 436.601837, 0.619035125, 2.31662245e-08, -0.785363317, -3.75929545e-08, 1, -1.33867917e-10, 0.785363317, 2.9606996e-08, 0.619035125)
+                            shoot = true
+                        end
+                        if shoot then
+                            warn("Shooting")
+                            humr.CFrame = cf
+                            task.wait(0.3)
+                        end
+                        status = "Getting"
+                    else
+                        status = "Getting"
+                    end
+                elseif status == "Shooting" then
+                    wait()
+                end
+            else
+                break
+            end
+        end
+    end
+end)
+
+Other.newButton("Low Online Server Hop", "Hops to a server with low players", function()
+    local Http = game:GetService("HttpService")
+    local TPS = game:GetService("TeleportService")
+    local Api = "https://games.roblox.com/v1/games/"
+    local _place = game.PlaceId
+    local _servers = Api .. _place .. "/servers/Public?sortOrder=Asc&limit=100"
+    function ListServers(cursor)
+        local Raw = game:HttpGet(_servers .. ((cursor and "&cursor=" .. cursor) or ""))
+        return Http:JSONDecode(Raw)
+    end
+    local Server, Next
+    repeat
+        local Servers = ListServers(Next)
+        Server = Servers.data[1]
+        Next = Servers.nextPageCursor
+    until Server
+    TPS:TeleportToPlaceInstance(_place, Server.id, game.Players.LocalPlayer)
+end)
